@@ -1,4 +1,8 @@
-import matplotlib
+try:
+    import matplotlib
+except ModuleNotFoundError:
+    raise SystemExit("Falta matplotlib. Instalalo con: python -m pip install matplotlib")
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np

@@ -10,6 +10,16 @@ La corrida principal valora una opción de compra americana con `S0 = 100`, `K =
 - NumPy
 - Matplotlib, solo para generar la figura
 
+## Instalación
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Los dos primeros scripts usan solo NumPy. `figura_convergencia.py` además necesita Matplotlib.
+
 ## Archivos
 
 - `broadie_glasserman.py`: implementación del método y del caso de estudio. Imprime el caso `b = 3`, la tabla de convergencia y la validación.
