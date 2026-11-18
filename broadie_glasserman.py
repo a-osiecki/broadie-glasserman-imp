@@ -19,6 +19,7 @@ Uso:
 
 from math import exp, sqrt
 from statistics import NormalDist
+import sys
 
 import numpy as np
 
@@ -139,6 +140,13 @@ def precio(s0, K, tipo, r, delta, sigma, T, d, b, n, confianza=0.90, semilla=Non
 # ---------------------------------------------------------------------------
 
 
+GRIS, AZUL, ROJO, NEGRITA, TITULO = "90", "94", "91", "1", "1;36"
+
+
+def pintar(texto, codigo):
+    return f"\033[{codigo}m{texto}\033[0m" if sys.stdout.isatty() else texto
+
+
 def fila(res):
     """Columnas comunes a las dos tablas."""
     return [
@@ -149,20 +157,37 @@ def fila(res):
     ]
 
 
-def tabla(encabezados, filas):
-    """Imprime columnas alineadas a la derecha."""
+def tabla(encabezados, filas, titulo=None):
     anchos = [max(len(e), *(len(f[i]) for f in filas)) for i, e in enumerate(encabezados)]
-    print("  ".join(e.rjust(a) for e, a in zip(encabezados, anchos)))
+    colores = [{"bajo": AZUL, "alto": ROJO}.get(e, "0") for e in encabezados]
+    barra = pintar("│", GRIS)
+
+    def borde(izq, medio, der):
+        return pintar(izq + medio.join("─" * (a + 2) for a in anchos) + der, GRIS)
+
+    def renglon(celdas, estilos):
+        cuerpo = f" {barra} ".join(pintar(c.rjust(a), e) for c, a, e in zip(celdas, anchos, estilos))
+        return f"{barra} {cuerpo} {barra}"
+
+    if titulo:
+        ancho = sum(anchos) + 3 * len(anchos) - 3
+        print(pintar("┌" + "─" * (ancho + 2) + "┐", GRIS))
+        print(f"{barra} {pintar(titulo.center(ancho), TITULO)} {barra}")
+        print(borde("├", "┬", "┤"))
+    else:
+        print(borde("┌", "┬", "┐"))
+    print(renglon(encabezados, [NEGRITA] * len(anchos)))
+    print(borde("├", "┼", "┤"))
     for f in filas:
-        print("  ".join(c.rjust(a) for c, a in zip(f, anchos)))
+        print(renglon(f, colores))
+    print(borde("└", "┴", "┘"))
 
 
 def imprimir_caso(res, verdad):
-    """Bloque del caso b = 3."""
     inf, sup = res["ic"]
-    print("Caso b = 3")
-    print(f"  {'Estimador bajo':<18}{res['bajo']:9.4f}   (error estándar {res['error_bajo']:.4f})")
-    print(f"  {'Estimador alto':<18}{res['alto']:9.4f}   (error estándar {res['error_alto']:.4f})")
+    print(pintar("Caso b = 3", TITULO))
+    print(pintar(f"  {'Estimador bajo':<18}{res['bajo']:9.4f}   (error estándar {res['error_bajo']:.4f})", AZUL))
+    print(pintar(f"  {'Estimador alto':<18}{res['alto']:9.4f}   (error estándar {res['error_alto']:.4f})", ROJO))
     print(f"  {'Intervalo 90%':<18}   [{inf:.4f}, {sup:.4f}]")
     print(f"  {'Precio puntual':<18}{res['puntual']:9.4f}")
     print(f"  {'Valor verdadero':<18}{verdad:9.4f}")
@@ -171,8 +196,7 @@ def imprimir_caso(res, verdad):
 
 
 def imprimir_convergencia(ramas, resultados, verdad):
-    """Tabla 1 del informe: convergencia con la cantidad de ramas."""
-    print("Convergencia con la cantidad de ramas")
+    print(pintar("Convergencia con la cantidad de ramas", TITULO))
     filas = [
         [str(b), *fila(res), f"{abs(res['puntual'] - verdad) / verdad:.2%}"]
         for b, res in zip(ramas, resultados)
@@ -182,8 +206,7 @@ def imprimir_convergencia(ramas, resultados, verdad):
 
 
 def imprimir_validacion(caso, d, n, semilla):
-    """Tabla 2 del informe: comparación con los valores de referencia."""
-    print("Validación contra Broadie y Glasserman (1997)")
+    print(pintar("Validación contra Broadie y Glasserman (1997)", TITULO))
     verdades = {90.0: 2.303, 100.0: 5.731, 110.0: 11.341}
     filas = []
     for s0, valor in verdades.items():
@@ -194,14 +217,16 @@ def imprimir_validacion(caso, d, n, semilla):
 
 
 def main():
-    """Corre el caso de estudio del informe."""
     caso = dict(K=100.0, tipo="compra", r=0.05, delta=0.10, sigma=0.20, T=1.0)
     d, n, semilla = 3, 100, 2026
     verdad = 5.731
 
-    print("Método de Broadie-Glasserman")
-    print("Opción de compra americana: S0 = 100, K = 100, r = 0.05, δ = 0.10, σ = 0.20, T = 1")
-    print(f"d = {d}, n = {n}, confianza = 90%")
+    print(pintar("Método de Broadie-Glasserman", TITULO))
+    tabla(
+        ["S0", "K", "r", "δ", "σ", "T", "d", "n", "confianza"],
+        [["100", "100", "0.05", "0.10", "0.20", "1", str(d), str(n), "90%"]],
+        titulo="Parámetros",
+    )
     print()
 
     r3 = precio(s0=100.0, **caso, d=d, b=3, n=n, semilla=semilla)
