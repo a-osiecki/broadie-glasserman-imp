@@ -5,7 +5,13 @@ Método de Broadie y Glasserman (1997).
 
 Curso: Modelos Matemáticos en Finanzas Cuantitativas
 Universidad Nacional de Córdoba, 2026
-Autor: Agustín Osiecki
+Autores: Agustín Osiecki
+
+La primera parte del archivo es el método: la simulación del árbol,
+los estimadores alto y bajo y el intervalo de confianza, con la
+ecuación de cada uno en su docstring. Después viene el caso de
+estudio del informe: el caso b = 3, la tabla de convergencia y la
+validación.
 
 Uso:
     python broadie_glasserman.py
@@ -13,27 +19,34 @@ Uso:
 
 from math import exp, sqrt
 from statistics import NormalDist
-import sys
 
 import numpy as np
 
 
 # ---------------------------------------------------------------------------
-# Implementación del método
+# El método.
 # ---------------------------------------------------------------------------
 
 
+def pago(s, K, tipo):
+    """Pago de ejercicio h(t, s). "compra" es un call, "venta" un put."""
+    if tipo == "compra":
+        return np.maximum(s - K, 0.0)
+    return np.maximum(K - s, 0.0)
+
 
 def simular_arbol(s0, r, delta, sigma, T, d, b, rng):
-    """
-        Devuelve los d+1 niveles del árbol. El nivel t es un arreglo con los
+    """Simula un árbol no recombinante.
+
+    Devuelve los d+1 niveles del árbol. El nivel t es un arreglo con los
     b**t precios de la fecha t. Cada nodo genera b hijos independientes:
 
         S_hijo = S_padre · exp[(r - delta - sigma²/2)·dt + sigma·√dt·Z]
 
-    con dt = T/d y Z ~ N(0,1).
+    con dt = T/d y Z ~ N(0,1). El árbol no recombina: dos nodos con el
+    mismo precio son nodos distintos.
     """
-    # Guarda el árbol entero: O(b**d) en memoria. Si d crece, conviene recorrerlo en profundidad.
+    # shortcut: guarda el árbol entero, O(b**d) memoria; profundidad primero si d crece
     dt = T / d
     deriva = (r - delta - sigma**2 / 2) * dt
     volatilidad = sigma * sqrt(dt)
@@ -47,7 +60,7 @@ def simular_arbol(s0, r, delta, sigma, T, d, b, rng):
     return niveles
 
 
-def estimadores(niveles, K, r, T, b):
+def estimadores(niveles, K, tipo, r, T, b):
     """Recursión hacia atrás sobre un árbol simulado.
 
     Devuelve (bajo, alto), el valor de cada estimador en la raíz. Sea
@@ -67,7 +80,7 @@ def estimadores(niveles, K, r, T, b):
     """
     d = len(niveles) - 1
     descuento = exp(-r * T / d)
-    h = [np.maximum(nivel - K, 0.0) for nivel in niveles]
+    h = [pago(nivel, K, tipo) for nivel in niveles]
 
     # Estimador alto: inducción hacia atrás desde la madurez.
     alto = h[d]
@@ -86,7 +99,7 @@ def estimadores(niveles, K, r, T, b):
     return float(bajo[0]), float(alto[0])
 
 
-def precio(s0, K, r, delta, sigma, T, d, b, n, confianza=0.90, semilla=None):
+def precio(s0, K, tipo, r, delta, sigma, T, d, b, n, confianza=0.90, semilla=None):
     """Promedia n árboles independientes y arma el intervalo de confianza.
 
     Devuelve un diccionario con las medias, los errores estándar, el
@@ -103,10 +116,10 @@ def precio(s0, K, r, delta, sigma, T, d, b, n, confianza=0.90, semilla=None):
     altos = np.empty(n)
     for i in range(n):
         arbol = simular_arbol(s0, r, delta, sigma, T, d, b, rng)
-        bajos[i], altos[i] = estimadores(arbol, K, r, T, b)
+        bajos[i], altos[i] = estimadores(arbol, K, tipo, r, T, b)
 
     z = NormalDist().inv_cdf(1 - (1 - confianza) / 2)
-    h0 = max(s0 - K, 0.0)
+    h0 = float(pago(s0, K, tipo))
     bajo, alto = float(bajos.mean()), float(altos.mean())
     error_bajo = float(bajos.std(ddof=1) / sqrt(n))
     error_alto = float(altos.std(ddof=1) / sqrt(n))
@@ -126,14 +139,8 @@ def precio(s0, K, r, delta, sigma, T, d, b, n, confianza=0.90, semilla=None):
 # ---------------------------------------------------------------------------
 
 
-GRIS, AZUL, ROJO, NEGRITA, TITULO = "90", "94", "91", "1", "1;36"
-
-
-def pintar(texto, codigo):
-    return f"\033[{codigo}m{texto}\033[0m" if sys.stdout.isatty() else texto
-
-
 def fila(res):
+    """Columnas comunes a las dos tablas."""
     return [
         f"{res['bajo']:.4f}",
         f"{res['alto']:.4f}",
@@ -142,37 +149,20 @@ def fila(res):
     ]
 
 
-def tabla(encabezados, filas, titulo=None):
+def tabla(encabezados, filas):
+    """Imprime columnas alineadas a la derecha."""
     anchos = [max(len(e), *(len(f[i]) for f in filas)) for i, e in enumerate(encabezados)]
-    colores = [{"bajo": AZUL, "alto": ROJO}.get(e, "0") for e in encabezados]
-    barra = pintar("│", GRIS)
-
-    def borde(izq, medio, der):
-        return pintar(izq + medio.join("─" * (a + 2) for a in anchos) + der, GRIS)
-
-    def renglon(celdas, estilos):
-        cuerpo = f" {barra} ".join(pintar(c.rjust(a), e) for c, a, e in zip(celdas, anchos, estilos))
-        return f"{barra} {cuerpo} {barra}"
-
-    if titulo:
-        ancho = sum(anchos) + 3 * len(anchos) - 3
-        print(pintar("┌" + "─" * (ancho + 2) + "┐", GRIS))
-        print(f"{barra} {pintar(titulo.center(ancho), TITULO)} {barra}")
-        print(borde("├", "┬", "┤"))
-    else:
-        print(borde("┌", "┬", "┐"))
-    print(renglon(encabezados, [NEGRITA] * len(anchos)))
-    print(borde("├", "┼", "┤"))
+    print("  ".join(e.rjust(a) for e, a in zip(encabezados, anchos)))
     for f in filas:
-        print(renglon(f, colores))
-    print(borde("└", "┴", "┘"))
+        print("  ".join(c.rjust(a) for c, a in zip(f, anchos)))
 
 
 def imprimir_caso(res, verdad):
+    """Bloque del caso b = 3."""
     inf, sup = res["ic"]
-    print(pintar("Caso b = 3", TITULO))
-    print(pintar(f"  {'Estimador bajo':<18}{res['bajo']:9.4f}   (error estándar {res['error_bajo']:.4f})", AZUL))
-    print(pintar(f"  {'Estimador alto':<18}{res['alto']:9.4f}   (error estándar {res['error_alto']:.4f})", ROJO))
+    print("Caso b = 3")
+    print(f"  {'Estimador bajo':<18}{res['bajo']:9.4f}   (error estándar {res['error_bajo']:.4f})")
+    print(f"  {'Estimador alto':<18}{res['alto']:9.4f}   (error estándar {res['error_alto']:.4f})")
     print(f"  {'Intervalo 90%':<18}   [{inf:.4f}, {sup:.4f}]")
     print(f"  {'Precio puntual':<18}{res['puntual']:9.4f}")
     print(f"  {'Valor verdadero':<18}{verdad:9.4f}")
@@ -181,7 +171,8 @@ def imprimir_caso(res, verdad):
 
 
 def imprimir_convergencia(ramas, resultados, verdad):
-    print(pintar("Convergencia con la cantidad de ramas", TITULO))
+    """Tabla 1 del informe: convergencia con la cantidad de ramas."""
+    print("Convergencia con la cantidad de ramas")
     filas = [
         [str(b), *fila(res), f"{abs(res['puntual'] - verdad) / verdad:.2%}"]
         for b, res in zip(ramas, resultados)
@@ -191,7 +182,8 @@ def imprimir_convergencia(ramas, resultados, verdad):
 
 
 def imprimir_validacion(caso, d, n, semilla):
-    print(pintar("Validación contra Broadie y Glasserman (1997)", TITULO))
+    """Tabla 2 del informe: comparación con los valores de referencia."""
+    print("Validación contra Broadie y Glasserman (1997)")
     verdades = {90.0: 2.303, 100.0: 5.731, 110.0: 11.341}
     filas = []
     for s0, valor in verdades.items():
@@ -202,16 +194,14 @@ def imprimir_validacion(caso, d, n, semilla):
 
 
 def main():
-    caso = dict(K=100.0, r=0.05, delta=0.10, sigma=0.20, T=1.0)
+    """Corre el caso de estudio del informe."""
+    caso = dict(K=100.0, tipo="compra", r=0.05, delta=0.10, sigma=0.20, T=1.0)
     d, n, semilla = 3, 100, 2026
     verdad = 5.731
 
-    print(pintar("Método de Broadie-Glasserman", TITULO))
-    tabla(
-        ["S0", "K", "r", "δ", "σ", "T", "d", "n", "confianza"],
-        [["100", "100", "0.05", "0.10", "0.20", "1", str(d), str(n), "90%"]],
-        titulo="Parámetros",
-    )
+    print("Método de Broadie-Glasserman")
+    print("Opción de compra americana: S0 = 100, K = 100, r = 0.05, δ = 0.10, σ = 0.20, T = 1")
+    print(f"d = {d}, n = {n}, confianza = 90%")
     print()
 
     r3 = precio(s0=100.0, **caso, d=d, b=3, n=n, semilla=semilla)
