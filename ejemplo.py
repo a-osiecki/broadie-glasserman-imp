@@ -61,24 +61,56 @@ def estimadores_por_nivel(niveles):
 
 
 def imprimir_arbol(niveles, h, alto, bajo):
-    """Imprime el árbol con los precios y los estimadores."""
-    print("Árbol")
-    print(f"t0  S={niveles[0][0]:.2f}  VH={alto[0][0]:.2f}  VL={bajo[0][0]:.2f}")
+    """Dibuja el árbol con los precios y los estimadores en cada nodo."""
+    ancho = 92
+    filas = [[" "] * ancho for _ in range(12)]
 
-    def hijos(i, k, prefijo):
-        for j in range(B):
-            hijo = k * B + j
-            ultimo = j == B - 1
-            rama = "└─" if ultimo else "├─"
-            if i + 1 == D:
-                extra = f"h={h[i + 1][hijo]:.2f}"
-            else:
-                extra = f"VH={alto[i + 1][hijo]:.2f}  VL={bajo[i + 1][hijo]:.2f}"
-            print(f"{prefijo}{rama} t{i + 1}  S={niveles[i + 1][hijo]:.2f}  {extra}")
-            if i + 1 < D:
-                hijos(i + 1, hijo, prefijo + ("   " if ultimo else "│  "))
+    def poner(fila, x, texto):
+        for i, ch in enumerate(texto):
+            X = x + i
+            if 0 <= X < ancho:
+                filas[fila][X] = ch
 
-    hijos(0, 0, "")
+    def centrar(fila, x, texto):
+        poner(fila, x - len(texto) // 2, texto)
+
+    hojas_x = [4 + 10 * i for i in range(9)]
+    t1_x = [14, 44, 74]
+    raiz_x = 44
+
+    centrar(0, raiz_x, f"{niveles[0][0]:.2f}")
+    centrar(1, raiz_x, f"VH {alto[0][0]:.2f}  VL {bajo[0][0]:.2f}")
+    poner(2, raiz_x, "│")
+    for x in range(t1_x[0], t1_x[-1] + 1):
+        poner(3, x, "─")
+    for x in t1_x:
+        poner(3, x, "┼")
+    poner(3, t1_x[0], "┌")
+    poner(3, t1_x[-1], "┐")
+    for x in t1_x:
+        poner(4, x, "│")
+
+    for x, k in zip(t1_x, range(3)):
+        centrar(5, x, f"{niveles[1][k]:.2f}")
+        centrar(6, x, f"VH {alto[1][k]:.2f}  VL {bajo[1][k]:.2f}")
+
+    for xp in t1_x:
+        poner(7, xp, "│")
+        for x in range(xp - 10, xp + 11):
+            poner(8, x, "─")
+        for x in (xp - 10, xp, xp + 10):
+            poner(8, x, "┼")
+        poner(8, xp - 10, "┌")
+        poner(8, xp + 10, "┐")
+        for x in (xp - 10, xp, xp + 10):
+            poner(9, x, "│")
+
+    for x, k in zip(hojas_x, range(9)):
+        centrar(10, x, f"{niveles[2][k]:.2f}")
+        centrar(11, x, f"h {h[2][k]:.2f}")
+
+    for fila in filas:
+        print("".join(fila).rstrip())
 
 
 def main():
