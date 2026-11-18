@@ -5,7 +5,7 @@ Reproduce los números de las Conclusiones del informe.
 - Cuenta los nodos por árbol para b = 3 y b = 50 con d = 3 y d = 4.
 - Calcula el ancho del intervalo de b = 3 con n = 100.
 - Promedia 400 corridas de b = 3 con n = 100 (semillas 0 a 399).
-- Compara el ancho del intervalo con el mismo presupuesto de nodos:
+- Compara el ancho del intervalo con el mismo total de nodos:
   b = 3 con n = 318877 contra b = 50 con n = 100.
 
 Uso:
@@ -29,8 +29,8 @@ def main():
     n3 = nodos(3, 3)
     n50 = nodos(50, 3)
     n50d4 = nodos(50, 4)
-    presupuesto = 100 * n50
-    arboles = presupuesto // n3
+    total_nodos = 100 * n50
+    arboles = total_nodos // n3
 
     print("Nodos")
     tabla(
@@ -39,8 +39,8 @@ def main():
             ["b=3, d=3", str(n3)],
             ["b=50, d=3", str(n50)],
             ["b=50, d=4", str(n50d4)],
-            ["100 árboles b=50, d=3", str(presupuesto)],
-            ["árboles b=3 con ese presupuesto", str(arboles)],
+            ["100 árboles b=50, d=3", str(total_nodos)],
+            ["árboles b=3 con ese total", str(arboles)],
         ],
     )
     print()
@@ -64,7 +64,7 @@ def main():
 
     r3 = precio(**CASO, b=3, n=arboles, semilla=2026)
     r50 = precio(**CASO, b=50, n=100, semilla=2026)
-    print("Mismo presupuesto de nodos")
+    print("Mismo total de nodos")
     tabla(
         ["caso", "n", "ancho"],
         [

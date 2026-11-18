@@ -24,7 +24,7 @@ Los dos primeros scripts usan solo NumPy. `figura_convergencia.py` además neces
 
 - `broadie_glasserman.py`: implementación del método y del caso de estudio. Imprime el caso `b = 3`, la tabla de convergencia y la validación.
 - `ejemplo.py`: ejemplo de un solo árbol con `b = 3` y `d = 2`. Imprime el árbol con los estimadores de cada nodo y verifica el resultado contra `estimadores()`.
-- `conclusiones.py`: reproduce los números de las conclusiones: nodos por árbol, 400 semillas y el ancho del intervalo con el mismo presupuesto de nodos.
+- `conclusiones.py`: reproduce los números de las conclusiones: nodos por árbol, 400 semillas y el ancho del intervalo con el mismo total de nodos.
 - `figura_convergencia.py`: genera `figura_convergencia.pdf` con la convergencia de los estimadores.
 
 ## Uso
